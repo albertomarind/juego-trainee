@@ -1,0 +1,340 @@
+<link rel="import" href="../polymer/polymer-element.html">
+<link rel="import" href="../polymer/lib/elements/dom-repeat.html">
+<link rel="import" href="../polymer/lib/elements/dom-if.html">
+
+<dom-module id="juego-trainee">
+  <template>
+    <style>
+      :host {
+        --color-default: #979593;
+        --color-correcto: green;
+        --color-incorrecto: red;
+        --medida-figura: 8rem;
+        display: block;
+        background-color: black;
+        font-family: 'Courier New', Courier, monospace;
+        padding: 1rem;
+      }
+
+      .modal {
+        width: 100%;
+        height: 100vh;
+        position: fixed;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: rgba(0, 0, 0, .7);
+        z-index: 99;
+        top: 0;
+        left: 0;
+      }
+
+      .modal-content {
+        width: 30%;
+        height: 40%;
+        background-color: white;
+        letter-spacing: .5rem;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .modal-body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-wrap: wrap;
+        flex-grow: 1;
+        font-size: 2rem;
+        align-content: center;
+      }
+
+      .modal-body button {
+        font-size: .5em;
+        cursor: pointer;
+        margin: .5rem .5rem;
+        padding: .4rem;
+      }
+
+      .modal-header {
+        background-color: black;
+        color: white;
+        font-size: 1.5rem;
+        font-weight: 700;
+        padding: .75rem;
+        text-align: center;
+      }
+
+      .juego-header {
+        color: white;
+
+      }
+
+      .juego-header label {
+        display: block;
+        font-size: 1.4rem;
+        font-weight: 700;
+        margin-bottom: .5rem;
+      }
+
+      .juego-header span {
+        display: block;
+        font-size: 1.3rem;
+        margin-bottom: .5rem;
+      }
+
+      .contenedor-figuras {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+
+      .contenedor-figuras .figura {
+        margin: .5rem;
+        width: var(--medida-figura);
+        height: var(--medida-figura);
+        background-color: var(--color-default);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        color: white;
+        font-size: 2rem;
+      }
+
+      .figura.seleccionada-correcta::before,
+      .figura.seleccionada-incorrecta::before {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: var(--medida-figura);
+        height: var(--medida-figura);
+        font-size: 5rem;
+      }
+
+      .figura.seleccionada-correcta::before {
+        background-color: var(--color-correcto);
+        content: '🐱';
+      }
+
+      .figura.seleccionada-incorrecta::before {
+        background-color: var(--color-incorrecto);
+        content: '🐶';
+      }
+    </style>
+    <div class="juego">
+      <div class="juego-header">
+        <label>
+          Instrucciones
+        </label>
+        <span>
+          Hay un gato 🐱 escondido dentro de alguna de estas figuras, encuéntralo y gana, ¡pero cuidado con los perros
+          🐶,
+          ya que tambien están escondidos entre las figuras buscando al gato!
+        </span>
+      </div>
+      <div class="juego-body">
+        <div class="contenedor-figuras">
+          <template is="dom-repeat" items="{{figuras}}" as="figura">
+            <div class$="figura [[_validarFiguraSeleccionada(figura.selected,figura.isWinner)]]"
+              on-click="seleccionarFigura">
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+    <div class="modal" style$="display:[[_cambiarEstadoModal(modal.estado)]]">
+      <div class="modal-content">
+        <div class="modal-header">
+          <label>[[modal.mensaje]]</label>
+        </div>
+        <div class="modal-body">
+          <template is="dom-if" if="[[mostrarAtributoCantidad]]"> <button
+              on-click="accionBotonReinicioParcial">Reiniciar conservando cantidad</button></template>
+          <button on-click="accionBottonReinicioTotal">Reiniciar a estado por default</button>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <script>
+    const MiLocalStorage = (SuperClase) => class extends SuperClase {
+      guardarEnStorage(clave, valor) {
+        localStorage.setItem(clave, valor);
+      }
+      obtenerDeStorage(clave) {
+        return localStorage.getItem(clave);
+      }
+      limpiarStorage() {
+        localStorage.clear();
+      }
+    }
+
+    class JuegoTrainee extends MiLocalStorage(Polymer.Element) {
+      static get is() { return 'juego-trainee'; }
+      static get properties() {
+        return {
+          modal: {
+            type: Object,
+            value: {
+              estado: false,
+              mensaje: ''
+            }
+          },
+          contador: {
+            type: Number,
+            value: 0
+          },
+          figuras: {
+            type: Array,
+            value: []
+          },
+          mostrarAtributoCantidad: {
+            type: Boolean,
+            value: false
+          }
+        };
+      }
+
+      connectedCallback() {
+        super.connectedCallback();
+        if (!this.recuperarEstadoJuegoDeStorage()) {
+          this.set('figuras', this.crearArregloFiguras(5));
+        }
+      }
+
+      _validarValorCantidad(valor){
+        console.log('aqui inicia');
+        console.log(typeof this.get('mostrarAtributoCantidad'));
+        console.log(typeof valor);
+        return valor
+      }
+
+      accionBotonReinicioParcial() {
+        this.set('figuras', this.crearArregloFiguras(this.get('figuras').length));
+        this.set('contador', 0);
+        this.set('mostrarAtributoCantidad', this.get('mostrarAtributoCantidad'));
+        this.limpiarStorage();
+        this.set('modal.estado', false);
+        this.set('modal.estado', false);
+        this.guardarEstadoJuegoEnStorage();
+      }
+
+      accionBottonReinicioTotal() {
+        this.set('figuras', this.crearArregloFiguras(5));
+        this.set('contador', 0);
+        this.set('mostrarAtributoCantidad', false);
+        this.limpiarStorage();
+        this.set('modal.estado', false);
+        this.set('modal.estado', false);
+        if (this.hasAttribute('cantidad')) {
+          this.removeAttribute('cantidad');
+        }
+      }
+
+      _cambiarEstadoModal(estado) {
+        return estado ? 'flex' : 'none';
+      }
+
+      crearArregloFiguras(cantidad) {
+        let numerosSinRepetir = [];
+        while (numerosSinRepetir.length < cantidad) {
+          let numeroAleatorio = Math.floor((Math.random() * cantidad) + 1);
+          if (!numerosSinRepetir.find((n) => n === numeroAleatorio)) {
+            numerosSinRepetir.push(numeroAleatorio);
+          }
+        }
+        return numerosSinRepetir.map((n) => ({
+          isWinner: n === 1 ? true : false,
+          selected: false
+        }));
+      }
+
+      _validarFiguraSeleccionada(selected, isWinner) {
+        if (selected && isWinner) {
+          return 'seleccionada-correcta';
+        } else if (selected && isWinner === false) {
+          return 'seleccionada-incorrecta';
+        }
+      }
+
+      seleccionarFigura(evento) {
+        evento.model.set('figura.selected', true);
+        if (evento.model.figura.isWinner) {
+          this.mostrarModal('GANASTE');
+        } else if (this.validarIntentos()) {
+          this.mostrarModal('PERDISTE');
+        } else {
+          this.incrementarContador();
+          this.guardarEstadoJuegoEnStorage();
+        }
+      }
+
+      validarIntentos() {
+        return this.get('contador') === this.get('figuras').length - 2 ? true : false;
+      }
+
+      mostrarModal(mensaje) {
+        this.set('modal.estado', true);
+        this.set('modal.mensaje', mensaje);
+      }
+
+      guardarEstadoJuegoEnStorage() {
+        let estadoJuego = {
+          figuras: this.get('figuras'),
+          contador: this.get('contador')
+        };
+        if (this.get('mostrarAtributoCantidad')) {
+          estadoJuego.mostrarAtributoCantidad = true;
+        } else {
+          estadoJuego.mostrarAtributoCantidad = false;
+        }
+
+        this.guardarEnStorage('estadoJuego', JSON.stringify(estadoJuego));
+      }
+
+      incrementarContador() {
+        let contador = this.get('contador');
+        this.set('contador', ++contador);
+      }
+
+      recuperarEstadoJuegoDeStorage() {
+        let estadoJuegoStr = this.obtenerDeStorage('estadoJuego');
+        if (estadoJuegoStr !== null) {
+          let estadoJuego = JSON.parse(estadoJuegoStr);
+          this.set('contador', estadoJuego.contador);
+          this.set('figuras', estadoJuego.figuras);
+          if (estadoJuego.mostrarAtributoCantidad) {
+            this.set('mostrarAtributoCantidad', estadoJuego.mostrarAtributoCantidad);
+            this.evitarListener = true;//Este atributo evita que al setear la variable 'cantidad' en el componente se llame nuevamente al callback
+            this.setAttribute('cantidad', estadoJuego.figuras.length);
+          }
+          return true;
+        }
+        return false;
+      }
+
+
+      attributeChangedCallback(name, oldValue, newValue) {
+        if (this.evitarListener) {
+          this.evitarListener = false;
+          return;
+        }
+        if (name === 'cantidad') {
+          let cantidad = newValue === null ? 5 : newValue;
+          this.set('figuras', this.crearArregloFiguras(cantidad));
+          this.set('contador', 0);
+          this.set('mostrarAtributoCantidad', newValue === null ? false : true);
+          console.log('acaaa',this.get('mostrarAtributoCantidad'));
+          this.guardarEstadoJuegoEnStorage();
+        }
+      }
+
+      static get observedAttributes() {
+        return ['cantidad'];
+      }
+
+    }
+
+    window.customElements.define(JuegoTrainee.is, JuegoTrainee);
+  </script>
+</dom-module>
